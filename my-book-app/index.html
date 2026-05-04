@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All We Have Is Yesterday</title>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-color: #f8f9fa; /* Sleek, modern off-white */
+      --text-color: #202124; 
+      --ui-color: #5f6368;
+      --accent: #000000;
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(0, 0, 0, 0.05);
+    }
+
+    body.dark-mode {
+      --bg-color: #121212;
+      --text-color: #e8eaed;
+      --ui-color: #9aa0a6;
+      --accent: #ffffff;
+      --glass-bg: rgba(30, 30, 30, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.05);
+    }
+
+    body {
+      margin: 0; padding: 0;
+      background-color: var(--bg-color);
+      height: 100vh; overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      transition: background-color 0.4s ease;
+    }
+    
+    /* Main App Layout */
+    #app-container {
+      position: relative;
+      width: 100vw; height: 100vh;
+      display: flex; flex-direction: column;
+    }
+
+    /* Top Navigation Bar */
+    #top-nav {
+      height: 60px;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 30px;
+      z-index: 50;
+    }
+
+    .nav-left, .nav-right { display: flex; gap: 15px; align-items: center; }
+
+    .btn-icon {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      color: var(--text-color);
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex; justify-content: center; align-items: center;
+      font-size: 1.2rem;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-icon:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.05); }
+
+    .book-title-header {
+      font-weight: 600; font-size: 0.9rem; letter-spacing: 1px;
+      color: var(--ui-color); text-transform: uppercase;
+    }
+
+    /* Book Viewer */
+    #viewer-wrapper {
+      flex: 1; position: relative;
+      width: 100%; max-width: 1200px;
+      margin: 0 auto;
+      display: flex; align-items: center;
+    }
+
+    #viewer { width: 100%; height: 90%; }
+
+    /* Floating Arrows */
+    .nav-arrow {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      color: var(--text-color);
+      width: 50px; height: 50px; border-radius: 50%;
+      display: flex; justify-content: center; align-items: center;
+      font-size: 1.5rem; cursor: pointer; z-index: 40;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      transition: all 0.2s;
+    }
+    .nav-arrow:hover { background: var(--accent); color: var(--bg-color); }
+    #prev-btn { left: -25px; }
+    #next-btn { right: -25px; }
+
+    @media (max-width: 1300px) {
+      #prev-btn { left: 10px; }
+      #next-btn { right: 10px; }
+    }
+
+    /* Bottom Status Bar & Progress */
+    #bottom-bar {
+      height: 50px; display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      padding: 0 30px; position: relative;
+    }
+
+    #stats-text {
+      font-size: 0.8rem; font-weight: 500;
+      color: var(--ui-color); letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    #progress-container {
+      width: 100%; max-width: 600px;
+      height: 4px; background-color: var(--glass-border);
+      border-radius: 2px; overflow: hidden;
+    }
+
+    #progress-fill {
+      height: 100%; width: 0%;
+      background-color: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    /* Sidebar TOC */
+    #sidebar {
+      position: fixed; top: 0; left: -350px;
+      width: 350px; height: 100%;
+      background-color: var(--glass-bg); backdrop-filter: blur(20px);
+      z-index: 100; box-shadow: 10px 0 30px rgba(0,0,0,0.05);
+      transition: left 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+      display: flex; flex-direction: column;
+    }
+    #sidebar.open { left: 0; }
+    #overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4); z-index: 90;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    #overlay.show { opacity: 1; pointer-events: auto; }
+
+    #sidebar-header {
+      padding: 30px; border-bottom: 1px solid var(--glass-border);
+      display: flex; justify-content: space-between; align-items: center;
+      font-weight: 700; font-size: 1.1rem; color: var(--text-color);
+    }
+    #toc-list {
+      flex: 1; overflow-y: auto; padding: 20px 0; margin: 0; list-style: none;
+    }
+    #toc-list li a {
+      display: block; padding: 15px 30px; color: var(--ui-color);
+      text-decoration: none; font-size: 0.95rem; transition: 0.2s;
+    }
+    #toc-list li a:hover, #toc-list li a.active {
+      color: var(--text-color); background: var(--glass-border); font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="overlay"></div>
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <span>Chapters</span>
+      <button class="btn-icon" id="close-menu">✕</button>
+    </div>
+    <ul id="toc-list"></ul>
+  </div>
+
+  <div id="app-container">
+    <div id="top-nav">
+      <div class="nav-left">
+        <button class="btn-icon" id="open-menu">☰</button>
+      </div>
+      <div class="book-title-header">All We Have Is Yesterday</div>
+      <div class="nav-right">
+        <button class="btn-icon" id="theme-toggle">🌙</button>
+      </div>
+    </div>
+
+    <div id="viewer-wrapper">
+      <button class="nav-arrow" id="prev-btn">‹</button>
+      <div id="viewer"></div>
+      <button class="nav-arrow" id="next-btn">›</button>
+    </div>
+
+    <div id="bottom-bar">
+      <div id="stats-text">Calculating book length...</div>
+      <div id="progress-container">
+        <div id="progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var book = ePub("book.epub");
+    
+    // Engine Config: "auto" spread creates the flipbook vibe on desktop, single page on mobile
+    var rendition = book.renderTo("viewer", {
+      width: "100%", height: "100%", 
+      spread: "auto", 
+      manager: "continuous", 
+      flow: "paginated"
+    });
+
+    rendition.themes.register("light", { "body": { "background": "transparent", "color": "#202124 !important", "font-family": 'Georgia, serif !important', "line-height": "1.8", "padding": "20px 40px !important", "text-align": "justify" } });
+    rendition.themes.register("dark", { "body": { "background": "transparent", "color": "#e8eaed !important", "font-family": 'Georgia, serif !important', "line-height": "1.8", "padding": "20px 40px !important", "text-align": "justify" } });
+    rendition.themes.select("light");
+
+    // Boot up the analytics engine
+    var totalLocations = 0;
+    book.ready.then(() => {
+      // Build TOC
+      book.navigation.get().then((nav) => {
+        const tocList = document.getElementById("toc-list");
+        nav.forEach(chapter => {
+          const li = document.createElement("li");
+          const a = document.createElement("a");
+          a.textContent = chapter.label.trim();
+          a.href = chapter.href;
+          a.onclick = (e) => {
+            e.preventDefault();
+            rendition.display(chapter.href);
+            closeMenu();
+          };
+          li.appendChild(a);
+          tocList.appendChild(li);
+        });
+      });
+
+      // Generate Locations for precise % and Time estimates
+      // 1600 is standard chars per location. Takes a second to compute.
+      return book.locations.generate(1600);
+    }).then((locations) => {
+      totalLocations = locations.length;
+      updateProgress(); // Initial update once ready
+    });
+
+    // Handle Page Turns & Progress
+    rendition.on("relocated", function(location) {
+      localStorage.setItem("awhiy-progress", location.start.cfi);
+      if (totalLocations > 0) updateProgress();
+    });
+
+    function updateProgress() {
+      var currentLocation = book.locations.percentageFromCfi(rendition.location.start.cfi);
+      var percentage = Math.round(currentLocation * 100);
+      
+      // Update Progress Bar
+      document.getElementById("progress-fill").style.width = percentage + "%";
+      
+      // Calculate estimated time remaining
+      // Assumption: 1 location ~ 250 words. Average read speed ~ 250 WPM. So 1 loc = ~1 minute.
+      var locationsLeft = totalLocations - (currentLocation * totalLocations);
+      var minutesLeft = Math.max(1, Math.round(locationsLeft));
+      
+      var timeText = minutesLeft > 60 
+        ? Math.round(minutesLeft / 60) + " hrs left" 
+        : minutesLeft + " mins left";
+
+      if (percentage === 100) timeText = "Finished";
+
+      document.getElementById("stats-text").innerText = percentage + "% Read • " + timeText;
+    }
+
+    // Load Saved Location
+    var savedLocation = localStorage.getItem("awhiy-progress");
+    rendition.display(savedLocation || undefined);
+
+    // UI Controls
+    function openMenu() { 
+      document.getElementById("sidebar").classList.add("open"); 
+      document.getElementById("overlay").classList.add("show"); 
+    }
+    function closeMenu() { 
+      document.getElementById("sidebar").classList.remove("open"); 
+      document.getElementById("overlay").classList.remove("show"); 
+    }
+
+    document.getElementById("open-menu").onclick = openMenu;
+    document.getElementById("close-menu").onclick = closeMenu;
+    document.getElementById("overlay").onclick = closeMenu;
+
+    document.getElementById("theme-toggle").onclick = function() {
+      document.body.classList.toggle("dark-mode");
+      const isDark = document.body.classList.contains("dark-mode");
+      rendition.themes.select(isDark ? "dark" : "light");
+      this.innerText = isDark ? "☀️" : "🌙";
+    };
+
+    document.getElementById("prev-btn").onclick = () => rendition.prev();
+    document.getElementById("next-btn").onclick = () => rendition.next();
+
+    // Mobile Edge Tapping
+    rendition.on("click", (e) => {
+      const x = e.clientX;
+      if (x < window.innerWidth * 0.25) rendition.prev();
+      if (x > window.innerWidth * 0.75) rendition.next();
+    });
+
+    document.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowLeft") rendition.prev();
+      if (e.key === "ArrowRight") rendition.next();
+    });
+  </script>
+</body>
+</html>
