@@ -2,143 +2,189 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Premium Event Agenda</title>
-  
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-XXXXXXXXXX');
-  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Premium Reader App</title>
   
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#fcfaf8">
-  <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Book_icon_1.png/512px-Book_icon_1.png">
+  <meta name="theme-color" content="#ffffff">
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
   
   <style>
+    * { touch-action: manipulation; }
+
     :root {
-      --bg-color: #fcfaf8; --text-color: #2b2b2b; --ui-color: #888;
-      --accent: #2b2b2b; --glass-bg: rgba(252, 250, 248, 0.95); --glass-border: rgba(0, 0, 0, 0.08);
+      --bg-color: #ffffff; 
+      --text-color: #111827; 
+      --ui-color: #737373;
+      --accent: #d97706; 
+      --glass-bg: rgba(255, 255, 255, 0.95); 
+      --glass-border: rgba(0, 0, 0, 0.1);
+      --ruler-color: #e5e5e5;
     }
     body.dark-mode {
-      --bg-color: #121212; --text-color: #e8eaed; --ui-color: #777;
-      --accent: #ffffff; --glass-bg: rgba(18, 18, 18, 0.95); --glass-border: rgba(255, 255, 255, 0.1);
+      --bg-color: #121212; 
+      --text-color: #f3f4f6; 
+      --ui-color: #a3a3a3;
+      --accent: #fbbf24;
+      --glass-bg: rgba(18, 18, 18, 0.95); 
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --ruler-color: #333333;
     }
+    
     body {
       margin: 0; padding: 0; background-color: var(--bg-color); height: 100vh; overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; transition: background-color 0.3s ease;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      transition: background-color 0.3s ease; color: var(--text-color);
     }
+    
     #app-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
     
-    /* Top Navigation */
     #top-nav { 
-      height: 60px; display: flex; justify-content: space-between; align-items: center; 
-      padding: 0 15px; z-index: 50; width: 100%; box-sizing: border-box;
+      position: absolute; top: 0; left: 0; width: 100%; height: 60px; 
+      display: flex; justify-content: space-between; align-items: center; 
+      padding: 0 15px; z-index: 50; box-sizing: border-box;
+      background: var(--glass-bg); backdrop-filter: blur(15px);
+      border-bottom: 1px solid var(--glass-border);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .nav-group { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-    .btn-icon { 
-      background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-color); 
-      width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; 
-      justify-content: center; align-items: center; font-size: 1.1rem; 
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s; font-weight: 600;
-      -webkit-tap-highlight-color: transparent; 
-    }
-    .btn-icon:hover { transform: scale(1.05); }
-    .book-title-header { 
-      font-weight: 600; font-size: 0.8rem; letter-spacing: 2px; color: var(--ui-color); 
-      text-transform: uppercase; text-align: center;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
-      flex: 1; padding: 0 10px;
-    }
-    
-    /* Reader Area */
-    #viewer-wrapper { flex: 1; position: relative; width: 100%; max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
-    #viewer { width: 100%; height: 90%; }
-    
-    .touch-zone { position: absolute; top: 0; bottom: 0; width: 25%; z-index: 35; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-    #left-zone { left: 0; } #right-zone { right: 0; }
-    
-    .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-color); width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; cursor: pointer; z-index: 40; box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: 0.2s; }
-    .nav-arrow:hover { background: var(--accent); color: var(--bg-color); }
-    #prev-btn { left: -50px; } #next-btn { right: -50px; }
-    
-    /* Interactive Scrubber Timeline */
-    #scrubber-bar { 
-      height: 60px; display: flex; justify-content: space-between; align-items: center; 
-      padding: 0 25px; gap: 20px; z-index: 50; 
-    }
-    .scrubber-text { 
-      font-size: 0.75rem; font-weight: 600; color: var(--ui-color); 
-      letter-spacing: 1px; text-transform: uppercase; white-space: nowrap;
-    }
-    #scrubber-chapter { flex-shrink: 0; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
-    
-    .range-container { flex: 1; display: flex; align-items: center; }
-    #progress-slider {
-      -webkit-appearance: none; width: 100%; height: 4px; 
-      background: var(--glass-border); border-radius: 2px; outline: none; cursor: pointer;
-      transition: background 0.3s;
-    }
-    #progress-slider::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; }
-    #progress-slider::-webkit-slider-thumb {
-      -webkit-appearance: none; appearance: none; width: 16px; height: 16px; 
-      border-radius: 50%; background: var(--text-color); cursor: pointer; 
-      margin-top: -6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: transform 0.1s;
-    }
-    #progress-slider::-webkit-slider-thumb:hover { transform: scale(1.3); }
-    #progress-slider:disabled { opacity: 0.5; cursor: not-allowed; }
-    #progress-slider:disabled::-webkit-slider-thumb { cursor: not-allowed; }
 
-    /* Menus & Overlays */
-    #sidebar { position: fixed; top: 0; left: -320px; width: 320px; height: 100%; background-color: var(--glass-bg); backdrop-filter: blur(15px); z-index: 100; box-shadow: 5px 0 20px rgba(0,0,0,0.1); transition: left 0.3s ease; display: flex; flex-direction: column; }
+    .nav-right-group { display: flex; gap: 5px; transition: opacity 0.3s, transform 0.3s; }
+    
+    #libby-ui {
+      position: absolute; bottom: 0; left: 0; width: 100%;
+      padding: 10px 20px 25px 20px; box-sizing: border-box;
+      background: var(--glass-bg); backdrop-filter: blur(15px);
+      border-top: 1px solid var(--glass-border); z-index: 50;
+      display: flex; flex-direction: column; gap: 12px;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+    }
+
+    body.reading-mode #top-nav { background: transparent; border-bottom-color: transparent; backdrop-filter: none; }
+    body.reading-mode .nav-right-group { opacity: 0; pointer-events: none; transform: translateY(-10px); }
+    body.reading-mode #libby-ui { transform: translateY(100%); opacity: 0; pointer-events: none; }
+    
+    .btn-icon { 
+      background: transparent; border: none; color: var(--text-color); 
+      width: 45px; height: 45px; cursor: pointer; display: flex; 
+      justify-content: center; align-items: center; font-size: 1.4rem; 
+      -webkit-tap-highlight-color: transparent; border-radius: 50%; transition: 0.2s;
+    }
+    .btn-icon:active { transform: scale(0.9); }
+    
+    #viewer-wrapper { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10;}
+    
+    /* CRITICAL FIX: Padding moved here so EPUB engine doesn't crash */
+    #viewer { 
+        width: 100%; height: 100%; max-width: 800px; margin: 0 auto; 
+        padding: 65px 15px 110px 15px; box-sizing: border-box; 
+    }
+
+    .divider-row { position: relative; height: 1px; background: var(--glass-border); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;}
+    .page-readout { font-size: 0.85rem; font-weight: 600; color: var(--text-color); padding: 0 10px; margin-top: -2px;}
+    
+    #cover-art-container {
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      width: 50px; height: 50px; border-radius: 50%; overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 2px solid var(--bg-color);
+      background: var(--glass-border); z-index: 2;
+    }
+    #book-cover { width: 100%; height: 100%; object-fit: cover; }
+
+    .chapter-stats { display: flex; justify-content: center; align-items: center; font-size: 0.75rem; font-weight: 700; }
+    .chapter-title-stack { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    #chapter-title { color: var(--text-color); font-size: 0.85rem; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;}
+    #toc-trigger { color: var(--ui-color); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
+
+    .ruler-container { position: relative; height: 40px; display: flex; align-items: center; margin-top: 5px; max-width: 800px; margin-left: auto; margin-right: auto; width: 100%;}
+    #progress-slider {
+      -webkit-appearance: none; width: 100%; height: 30px; 
+      background: repeating-linear-gradient(90deg, var(--ruler-color), var(--ruler-color) 1px, transparent 1px, transparent 8px);
+      outline: none; cursor: pointer; position: relative; z-index: 5; border-radius: 5px;
+    }
+    #progress-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none; 
+      width: 4px; height: 35px; border-radius: 2px;
+      background: var(--text-color); cursor: pointer; box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    }
+    #progress-slider:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .bottom-actions { display: flex; justify-content: space-between; align-items: center; height: 30px; max-width: 800px; margin: 0 auto; width: 100%;}
+    #jump-back { 
+      background: none; border: none; font-size: 0.85rem; font-weight: 700; 
+      color: var(--ui-color); display: flex; align-items: center; gap: 5px; 
+      cursor: pointer; opacity: 0; pointer-events: none; transition: 0.3s;
+    }
+    #jump-back.active { opacity: 1; pointer-events: auto; }
+    #jump-back:hover { color: var(--text-color); }
+    #time-left { font-size: 0.75rem; font-weight: 600; color: var(--ui-color); }
+
+    /* Sidebar & Overlays */
+    #sidebar { position: fixed; top: 0; left: -320px; width: 320px; height: 100%; background-color: var(--bg-color); border-right: 1px solid var(--glass-border); z-index: 100; box-shadow: 10px 0 30px rgba(0,0,0,0.1); transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
     #sidebar.open { left: 0; }
-    #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 90; opacity: 0; pointer-events: none; transition: 0.3s; }
+    #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 90; opacity: 0; pointer-events: none; transition: 0.3s; }
     #overlay.show { opacity: 1; pointer-events: auto; }
-    #sidebar-header { padding: 25px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 1.1rem; color: var(--text-color); }
-    #toc-list { flex: 1; overflow-y: auto; padding: 10px 0; margin: 0; list-style: none; }
-    #toc-list li a { display: block; padding: 15px 25px; color: var(--text-color); text-decoration: none; font-size: 0.95rem; border-bottom: 1px solid var(--glass-border); transition: 0.2s; }
+    
+    .sidebar-tabs { display: flex; border-bottom: 1px solid var(--glass-border); }
+    .tab-btn { flex: 1; padding: 20px 0; background: none; border: none; color: var(--ui-color); font-weight: 700; cursor: pointer; transition: 0.2s; }
+    .tab-btn.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+    
+    .sidebar-content { flex: 1; overflow-y: auto; display: none; }
+    .sidebar-content.active { display: block; }
+    #toc-list, #bookmark-list { padding: 10px 0; margin: 0; list-style: none; }
+    #toc-list li a, .bookmark-item { display: block; padding: 15px 25px; color: var(--text-color); text-decoration: none; font-size: 0.95rem; border-bottom: 1px solid var(--glass-border); cursor: pointer; }
+    .bookmark-item { display: flex; justify-content: space-between; align-items: center; }
+    .bookmark-delete { color: #ef4444; background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; }
 
     #font-panel {
-      position: absolute; top: 65px; right: 20px; width: 240px; background: var(--glass-bg); backdrop-filter: blur(15px);
-      border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      position: absolute; top: 60px; right: 15px; width: 240px; background: var(--glass-bg); backdrop-filter: blur(15px);
+      border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
       z-index: 60; opacity: 0; pointer-events: none; transition: all 0.2s; transform: translateY(-10px); display: flex; flex-direction: column; gap: 12px;
     }
     #font-panel.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
     .font-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
     .font-control { flex: 1; background: transparent; border: 1px solid var(--glass-border); color: var(--text-color); padding: 8px 0; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: 0.2s; }
     .font-control:hover, .font-control.active { background: var(--text-color); color: var(--bg-color); }
-    #font-size-display { font-size: 0.85rem; color: var(--ui-color); font-weight: 600; width: 40px; text-align: center; }
+    
+    #bookmark-toggle { color: var(--ui-color); transition: 0.2s; }
+    #bookmark-toggle.bookmarked { color: var(--accent); }
 
-    #share-bar { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); background: var(--text-color); color: var(--bg-color); padding: 15px 25px; border-radius: 30px; display: flex; gap: 20px; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 200; transition: bottom 0.3s; font-weight: 600; font-size: 0.9rem; }
-    #share-bar.active { bottom: 80px; } 
-    .share-btn { background: none; border: none; color: inherit; font-weight: inherit; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-
-    @media (max-width: 1300px) { #prev-btn { left: 10px; } #next-btn { right: 10px; } }
-    @media (max-width: 900px) { 
-      .nav-arrow { display: none !important; } #viewer-wrapper { max-width: 95vw; } 
-      #scrubber-bar { padding: 0 15px; gap: 10px; }
-      #scrubber-chapter { max-width: 80px; font-size: 0.65rem; }
+    /* TOAST NOTIFICATION */
+    #toast {
+        position: fixed; top: -50px; left: 50%; transform: translateX(-50%);
+        background: var(--text-color); color: var(--bg-color);
+        padding: 10px 20px; border-radius: 20px; font-weight: 600; font-size: 0.9rem;
+        opacity: 0; pointer-events: none; transition: opacity 0.3s, top 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 9999;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
     }
+    #toast.show { opacity: 1; top: 30px; }
+
   </style>
 </head>
 <body>
 
+  <div id="toast">Bookmark Saved</div>
+
   <div id="overlay"></div>
   <div id="sidebar">
-    <div id="sidebar-header"><span>Index</span><button class="btn-icon" id="close-menu" style="width:30px;height:30px;font-size:0.9rem;">✕</button></div>
-    <ul id="toc-list"><li id="toc-loading"><a href="#">Loading document...</a></li></ul>
+    <div class="sidebar-tabs">
+      <button class="tab-btn active" onclick="switchTab('toc')">Index</button>
+      <button class="tab-btn" onclick="switchTab('bookmarks')">Bookmarks</button>
+    </div>
+    <div id="toc-content" class="sidebar-content active">
+      <ul id="toc-list"><li style="padding:20px; color:var(--ui-color);">Loading...</li></ul>
+    </div>
+    <div id="bookmarks-content" class="sidebar-content">
+      <ul id="bookmark-list"></ul>
+    </div>
   </div>
 
   <div id="app-container">
     <div id="top-nav">
-      <button class="btn-icon" id="open-menu">☰</button>
-      <div class="book-title-header" id="main-title">Interactive Reader</div>
-      <div class="nav-group">
+      <button class="btn-icon" id="open-menu">☰</button> 
+      <div class="nav-right-group">
+        <button class="btn-icon" id="bookmark-toggle">🔖</button>
         <button class="btn-icon" id="font-btn">Aa</button>
         <button class="btn-icon" id="theme-toggle">🌙</button>
       </div>
@@ -147,7 +193,6 @@
     <div id="font-panel">
       <div class="font-row">
         <button class="font-control" id="decrease-font">A-</button>
-        <span id="font-size-display">115%</span>
         <button class="font-control" id="increase-font">A+</button>
       </div>
       <div class="font-row">
@@ -157,200 +202,299 @@
     </div>
 
     <div id="viewer-wrapper">
-      <div id="left-zone" class="touch-zone"></div>
-      <div id="right-zone" class="touch-zone"></div>
-      <button class="nav-arrow" id="prev-btn">‹</button>
       <div id="viewer"></div>
-      <button class="nav-arrow" id="next-btn">›</button>
     </div>
 
-    <div id="scrubber-bar">
-      <div id="scrubber-chapter" class="scrubber-text">Loading...</div>
-      <div class="range-container">
+    <div id="libby-ui">
+      <div class="divider-row">
+        <span class="page-readout" id="page-current">pg. --</span>
+        <div id="cover-art-container"><img id="book-cover" src="" alt="Cover"></div>
+        <span class="page-readout" id="page-total">of --</span>
+      </div>
+
+      <div class="chapter-stats">
+        <div class="chapter-title-stack">
+          <span id="chapter-title">Loading Book...</span>
+          <span id="toc-trigger">Table of Contents</span>
+        </div>
+      </div>
+
+      <div class="ruler-container">
         <input type="range" id="progress-slider" min="0" max="100" value="0" step="0.1" disabled>
       </div>
-      <div id="scrubber-percent" class="scrubber-text">0%</div>
-    </div>
-  </div>
 
-  <div id="share-bar">
-    <button class="share-btn" id="copy-btn">📋 Copy</button>
-    <button class="share-btn" id="x-btn">𝕏 Share</button>
-    <button class="share-btn" id="close-share" style="margin-left: 10px; opacity: 0.5;">✕</button>
+      <div class="bottom-actions">
+        <button id="jump-back">👈 <span id="ghost-target">pg. --</span></button>
+        <span id="time-left"></span>
+      </div>
+    </div>
   </div>
 
   <script>
-    // 1. Service Worker for PWA Offline Mode
-    if ('serviceWorker' in navigator) { 
-      window.addEventListener('load', () => { 
-        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed: ', err)); 
-      }); 
+    // --- NUCLEAR CACHE BUSTER ---
+    // This physically destroys the Service Worker cache so updates happen instantly.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) { registration.unregister(); }
+      });
+    }
+    if (window.caches) {
+      caches.keys().then(function(names) {
+        for (let name of names) caches.delete(name);
+      });
     }
 
-    // 2. Initialize Book Engine
     var book = ePub("book.epub");
-    var rendition = book.renderTo("viewer", {
-      width: "100%", height: "100%", spread: "auto", minSpreadWidth: 800, manager: "continuous", flow: "paginated"
+    var rendition = book.renderTo("viewer", { width: "100%", height: "100%", spread: "auto", minSpreadWidth: 800, manager: "continuous", flow: "paginated" });
+
+    function triggerHaptic(type = "light") {
+        if (!navigator.vibrate) return;
+        if (type === "light") navigator.vibrate(10);
+        if (type === "heavy") navigator.vibrate(30);
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById("toast");
+        toast.innerText = msg;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 2000);
+    }
+
+    // Bookmark Engine
+    let bookmarks = JSON.parse(localStorage.getItem("awhiy-bookmarks")) || [];
+    const bookmarkToggleBtn = document.getElementById("bookmark-toggle");
+    let currentCfi = "";
+    let currentChapterName = "";
+
+    function renderBookmarks() {
+        const list = document.getElementById("bookmark-list");
+        list.innerHTML = "";
+        if (bookmarks.length === 0) {
+            list.innerHTML = `<li style="padding:20px; color:var(--ui-color); text-align:center;">No bookmarks yet. Tap 🔖 to save a page.</li>`;
+            return;
+        }
+        bookmarks.forEach((bm, index) => {
+            const li = document.createElement("div");
+            li.className = "bookmark-item";
+            li.innerHTML = `
+                <span onclick="goToBookmark('${bm.cfi}')" style="flex:1;">${bm.name} <br><small style="color:var(--ui-color)">${bm.preview}</small></span>
+                <button class="bookmark-delete" onclick="deleteBookmark(${index})">✕</button>
+            `;
+            list.appendChild(li);
+        });
+    }
+
+    bookmarkToggleBtn.onclick = () => {
+        triggerHaptic("heavy");
+        const existingIndex = bookmarks.findIndex(b => b.cfi === currentCfi);
+        if (existingIndex > -1) {
+            bookmarks.splice(existingIndex, 1);
+            bookmarkToggleBtn.classList.remove("bookmarked");
+            showToast("Bookmark Removed");
+        } else {
+            bookmarks.push({ cfi: currentCfi, name: currentChapterName, preview: new Date().toLocaleDateString() });
+            bookmarkToggleBtn.classList.add("bookmarked");
+            showToast("🔖 Bookmark Saved");
+        }
+        localStorage.setItem("awhiy-bookmarks", JSON.stringify(bookmarks));
+        renderBookmarks();
+    };
+
+    window.deleteBookmark = (index) => {
+        bookmarks.splice(index, 1);
+        localStorage.setItem("awhiy-bookmarks", JSON.stringify(bookmarks));
+        renderBookmarks();
+        checkIfBookmarked(currentCfi);
+    };
+
+    window.goToBookmark = (cfi) => { saveHistory(); rendition.display(cfi); closeSidebar(); };
+
+    function checkIfBookmarked(cfi) {
+        if (bookmarks.some(b => b.cfi === cfi)) bookmarkToggleBtn.classList.add("bookmarked");
+        else bookmarkToggleBtn.classList.remove("bookmarked");
+    }
+    renderBookmarks();
+
+    book.loaded.cover.then(coverUrl => {
+        if(coverUrl) { book.archive.createUrl(coverUrl).then(url => { document.getElementById('book-cover').src = url; }); }
     });
 
-    book.loaded.metadata.then(function(meta){
-       if(meta.title) document.getElementById("main-title").innerText = meta.title;
-    });
-
-    // 3. Typography Engine
-    rendition.themes.register("light", { "body": { "background": "transparent", "color": "#2b2b2b", "line-height": "1.7", "padding": "10px 15px", "text-align": "justify" }, "::selection": {"background": "rgba(0,0,0,0.1)"} });
-    rendition.themes.register("dark", { "body": { "background": "transparent", "color": "#e8eaed", "line-height": "1.7", "padding": "10px 15px", "text-align": "justify" }, "::selection": {"background": "rgba(255,255,255,0.2)"} });
-    rendition.themes.select("light");
+    // CRITICAL FIX: Safe, simple themes that won't crash the EPUB engine
+    rendition.themes.register("light", { "body": { "background": "#ffffff", "color": "#111827" } });
+    rendition.themes.register("dark", { "body": { "background": "#121212", "color": "#f3f4f6" } });
+    
+    const isInitiallyDark = document.body.classList.contains("dark-mode");
+    rendition.themes.select(isInitiallyDark ? "dark" : "light");
 
     let currentFontSize = parseInt(localStorage.getItem("awhiy-fontsize")) || 110;
     let currentFontFamily = localStorage.getItem("awhiy-fontfamily") || "Georgia, serif";
 
+    let isExactMath = false;
+    let totalPages = 0;
+    let isDragging = false; 
+
+    const pageTotalText = document.getElementById("page-total");
+    const pageCurrentText = document.getElementById("page-current");
+    const chapterText = document.getElementById("chapter-title");
+    const timeLeftText = document.getElementById("time-left");
+
+    function recalculatePages() {
+        let charsPerPage = Math.max(500, Math.round(1600 * (100 / currentFontSize)));
+        book.locations.generate(charsPerPage).then((locations) => {
+           isExactMath = true;
+           totalPages = locations.length;
+           pageTotalText.innerText = "of " + totalPages;
+           if (rendition.location && rendition.location.start) {
+               updateUI(rendition.location.start.cfi, rendition.location.start.href, rendition.location.start.index);
+           }
+        }).catch(err => { pageTotalText.innerText = ""; });
+    }
+
     function applyTypography() {
       rendition.themes.fontSize(currentFontSize + "%");
       rendition.themes.font(currentFontFamily);
-      document.getElementById("font-size-display").innerText = currentFontSize + "%";
       localStorage.setItem("awhiy-fontsize", currentFontSize);
       localStorage.setItem("awhiy-fontfamily", currentFontFamily);
       document.getElementById("font-serif").classList.toggle("active", currentFontFamily.includes("serif"));
       document.getElementById("font-sans").classList.toggle("active", !currentFontFamily.includes("serif"));
+      recalculatePages();
     }
-    applyTypography();
+    
+    let savedCfi = localStorage.getItem("awhiy-progress");
+    rendition.display(savedCfi || undefined).then(() => { applyTypography(); });
 
     document.getElementById("font-btn").onclick = (e) => { e.stopPropagation(); document.getElementById("font-panel").classList.toggle("show"); };
-    document.getElementById("increase-font").onclick = () => { if (currentFontSize < 200) currentFontSize += 10; applyTypography(); };
-    document.getElementById("decrease-font").onclick = () => { if (currentFontSize > 80) currentFontSize -= 10; applyTypography(); };
-    document.getElementById("font-serif").onclick = () => { currentFontFamily = "Georgia, serif"; applyTypography(); };
-    document.getElementById("font-sans").onclick = () => { currentFontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"; applyTypography(); };
+    document.getElementById("increase-font").onclick = () => { triggerHaptic(); if (currentFontSize < 200) { currentFontSize += 15; applyTypography(); } };
+    document.getElementById("decrease-font").onclick = () => { triggerHaptic(); if (currentFontSize > 80) { currentFontSize -= 15; applyTypography(); } };
+    document.getElementById("font-serif").onclick = () => { triggerHaptic(); currentFontFamily = "Georgia, serif"; applyTypography(); };
+    document.getElementById("font-sans").onclick = () => { triggerHaptic(); currentFontFamily = "-apple-system, sans-serif"; applyTypography(); };
 
-    function closeMenus(e) {
-      if(!e.target.closest("#font-panel") && !e.target.closest("#font-btn")) document.getElementById("font-panel").classList.remove("show");
-    }
-    document.addEventListener("click", closeMenus); document.addEventListener("touchstart", closeMenus);
-
-    // 4. INSTANT DISPLAY (Crucial Fix: Do not wait for math)
     const slider = document.getElementById("progress-slider");
-    const percentText = document.getElementById("scrubber-percent");
-    const chapterText = document.getElementById("scrubber-chapter");
+    const jumpBtn = document.getElementById("jump-back");
+    const ghostTargetText = document.getElementById("ghost-target");
 
-    let savedCfi = localStorage.getItem("awhiy-progress");
-    rendition.display(savedCfi || undefined);
+    let historyCfi = null; 
 
-    // 5. Load Sidebar TOC Asynchronously
     book.loaded.navigation.then((nav) => {
       const tocList = document.getElementById("toc-list"); tocList.innerHTML = ""; 
       if (nav && nav.length > 0) {
         nav.forEach(chapter => {
           const li = document.createElement("li"), a = document.createElement("a");
           a.textContent = chapter.label.trim(); a.href = chapter.href;
-          a.onclick = (e) => { e.preventDefault(); rendition.display(chapter.href); closeSidebar(); };
+          a.onclick = (e) => { e.preventDefault(); saveHistory(); rendition.display(chapter.href); closeSidebar(); };
           li.appendChild(a); tocList.appendChild(li);
         });
-      } else {
-        book.spine.each((item, index) => {
-          const li = document.createElement("li"), a = document.createElement("a");
-          a.textContent = "Part " + (index + 1); a.href = item.href;
-          a.onclick = (e) => { e.preventDefault(); rendition.display(item.href); closeSidebar(); };
-          li.appendChild(a); tocList.appendChild(li);
-        });
-      }
-    }).catch(() => {
-        document.getElementById("toc-loading").innerText = "Index Unavailable";
-    });
-
-    // 6. Background Engine for Scrubber Math
-    book.ready.then(() => {
-      slider.disabled = false; 
-      
-      book.locations.generate(1600).then(() => {
-         console.log("Exact math generated.");
-         if (rendition.location && rendition.location.start) {
-             let exactPercent = Math.round(book.locations.percentageFromCfi(rendition.location.start.cfi) * 100);
-             slider.value = exactPercent;
-             percentText.innerText = exactPercent + "%";
-             updateSliderGradient(exactPercent);
-         }
-      }).catch(err => console.warn("Using Fallback Math Engine."));
-    });
-
-    slider.addEventListener("change", function() {
-      let percentage = slider.value / 100;
-      if (book.locations.length() > 0) {
-          rendition.display(book.locations.cfiFromPercentage(percentage));
-      } else {
-          let targetIndex = Math.floor(percentage * book.spine.length);
-          if (book.spine.get(targetIndex)) rendition.display(book.spine.get(targetIndex).href);
       }
     });
 
     slider.addEventListener("input", function() {
-      updateSliderGradient(slider.value);
-      percentText.innerText = Math.round(slider.value) + "%";
+      isDragging = true; triggerHaptic("light");
+      let percentage = slider.value / 100;
+      if (isExactMath) {
+          let estimatedPage = Math.round(percentage * totalPages) || 1;
+          pageCurrentText.innerText = "pg. " + estimatedPage;
+      } else { pageCurrentText.innerText = Math.round(slider.value) + "%"; }
     });
 
-    function updateSliderGradient(val) {
-      let color = document.body.classList.contains("dark-mode") ? "#ffffff" : "#2b2b2b";
-      slider.style.background = `linear-gradient(to right, ${color} ${val}%, var(--glass-border) ${val}%)`;
+    slider.addEventListener("change", function() {
+      saveHistory(); 
+      let percentage = slider.value / 100;
+      if (isExactMath) { rendition.display(book.locations.cfiFromPercentage(percentage)).then(() => { isDragging = false; }); } 
+      else {
+          let targetIndex = Math.floor(percentage * book.spine.length);
+          if (book.spine.get(targetIndex)) rendition.display(book.spine.get(targetIndex).href).then(() => { isDragging = false; });
+          else isDragging = false;
+      }
+    });
+
+    function saveHistory() {
+      if(rendition.location && rendition.location.start) {
+        historyCfi = rendition.location.start.cfi;
+        let p = isExactMath ? book.locations.locationFromCfi(historyCfi) : Math.round(slider.value) + "%";
+        ghostTargetText.innerText = isExactMath ? `pg. ${p}` : p;
+        jumpBtn.classList.add("active");
+      }
+    }
+    
+    jumpBtn.onclick = () => { triggerHaptic(); if(historyCfi) { rendition.display(historyCfi); jumpBtn.classList.remove("active"); historyCfi = null; } };
+
+    function updateUI(cfi, href, index) {
+      currentCfi = cfi; checkIfBookmarked(cfi); slider.disabled = false;
+      if (isDragging) return; 
+      
+      let navItem = book.navigation.get(href);
+      currentChapterName = (navItem && navItem.label) ? navItem.label.trim() : "Part " + (index + 1);
+      chapterText.innerText = currentChapterName;
+
+      if (isExactMath) {
+          let currentPage = book.locations.locationFromCfi(cfi);
+          let percentage = Math.round(book.locations.percentageFromCfi(cfi) * 100);
+          pageCurrentText.innerText = "pg. " + currentPage;
+          slider.value = percentage;
+          
+          let pagesLeft = totalPages - currentPage;
+          let minsLeft = Math.max(1, Math.round(pagesLeft * 1.2)); 
+          timeLeftText.innerText = minsLeft > 60 ? Math.round(minsLeft/60) + " hrs left" : minsLeft + " mins left";
+      } else {
+          let percentage = Math.round((index / book.spine.length) * 100);
+          pageCurrentText.innerText = percentage + "%";
+          slider.value = percentage; timeLeftText.innerText = "";
+      }
     }
 
-    // 7. Navigation & GA4 Tracking
     rendition.on("relocated", function(location) {
       localStorage.setItem("awhiy-progress", location.start.cfi);
-      
-      let navItem = book.navigation.get(location.start.href);
-      let currentText = (navItem && navItem.label) ? navItem.label.trim() : "Part " + (location.start.index + 1);
-      chapterText.innerText = currentText;
-
-      let percentage = 0;
-      if (book.locations.length() > 0) {
-          percentage = Math.round(book.locations.percentageFromCfi(location.start.cfi) * 100);
-      } else {
-          percentage = Math.round((location.start.index / book.spine.length) * 100);
-      }
-      
-      slider.value = percentage;
-      percentText.innerText = percentage + "%";
-      updateSliderGradient(percentage);
-      document.getElementById("share-bar").classList.remove("active");
-
-      if (typeof gtag === 'function') {
-        gtag('event', 'page_view', {
-          page_title: currentText,
-          page_location: window.location.origin + window.location.pathname + "?section=" + encodeURIComponent(currentText)
-        });
-      }
+      updateUI(location.start.cfi, location.start.href, location.start.index);
     });
 
-    // 8. Highlighting Logic
-    let selectedText = "";
-    rendition.on("selected", function(cfiRange, contents) {
-      book.getRange(cfiRange).then(function(range) {
-        selectedText = range.toString().trim();
-        if (selectedText.length > 0) document.getElementById("share-bar").classList.add("active");
-      });
-    });
-
-    rendition.on("click", () => { document.getElementById("share-bar").classList.remove("active"); document.getElementById("font-panel").classList.remove("show"); });
-
-    document.getElementById("close-share").onclick = () => document.getElementById("share-bar").classList.remove("active");
-    document.getElementById("copy-btn").onclick = () => { navigator.clipboard.writeText(`"${selectedText}" — Read it here: ${window.location.href}`); document.getElementById("copy-btn").innerText = "✅ Copied!"; setTimeout(() => document.getElementById("copy-btn").innerText = "📋 Copy", 2000); };
-    document.getElementById("x-btn").onclick = () => { let tweetText = encodeURIComponent(`"${selectedText}"`); let tweetUrl = encodeURIComponent(window.location.href); window.open(`https://twitter.com/intent/tweet?text=${tweetText}&url=${tweetUrl}`, '_blank'); };
-
-    // 9. Menus & Controls
-    function openSidebar() { document.getElementById("sidebar").classList.add("open"); document.getElementById("overlay").classList.add("show"); }
-    function closeSidebar() { document.getElementById("sidebar").classList.remove("open"); document.getElementById("overlay").classList.remove("show"); }
-    document.getElementById("open-menu").onclick = openSidebar; document.getElementById("close-menu").onclick = closeSidebar; document.getElementById("overlay").onclick = closeSidebar;
+    let touchStartX = 0; let touchEndX = 0;
+    function handleSwipe() {
+        if (touchEndX < touchStartX - 40) { triggerHaptic("light"); jumpBtn.classList.remove("active"); historyCfi = null; rendition.next(); }
+        if (touchEndX > touchStartX + 40) { triggerHaptic("light"); jumpBtn.classList.remove("active"); historyCfi = null; rendition.prev(); }
+    }
     
+    rendition.on('touchstart', event => { touchStartX = event.changedTouches[0].screenX; });
+    rendition.on('touchend', event => { touchEndX = event.changedTouches[0].screenX; handleSwipe(); });
+    
+    // SMART TAP
+    rendition.on("click", (e) => {
+        const width = window.innerWidth;
+        const x = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
+        if (!x) return;
+        
+        if (x < width * 0.25) { triggerHaptic("light"); rendition.prev(); }
+        else if (x > width * 0.75) { triggerHaptic("light"); rendition.next(); }
+        else { 
+            document.body.classList.toggle("reading-mode"); 
+            document.getElementById("font-panel").classList.remove("show");
+        }
+    });
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(`${tab}-content`).classList.add('active');
+    }
+
+    const overlay = document.getElementById("overlay");
+    function closeSidebar() { document.getElementById("sidebar").classList.remove("open"); overlay.classList.remove("show"); document.getElementById("font-panel").classList.remove("show");}
+    function openSidebar() { triggerHaptic(); document.getElementById("sidebar").classList.add("open"); overlay.classList.add("show"); }
+    
+    overlay.addEventListener('click', closeSidebar);
+    overlay.addEventListener('touchstart', closeSidebar, {passive: true});
+    document.getElementById("open-menu").onclick = openSidebar; 
+    document.getElementById("toc-trigger").onclick = openSidebar;
+
     document.getElementById("theme-toggle").onclick = function() {
+      triggerHaptic();
       document.body.classList.toggle("dark-mode");
       const isDark = document.body.classList.contains("dark-mode");
       rendition.themes.select(isDark ? "dark" : "light");
-      document.querySelector('meta[name="theme-color"]').setAttribute('content', isDark ? '#121212' : '#fcfaf8');
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', isDark ? '#121212' : '#ffffff');
       this.innerText = isDark ? "☀️" : "🌙";
-      updateSliderGradient(slider.value); 
     };
 
-    document.getElementById("prev-btn").onclick = () => rendition.prev(); document.getElementById("next-btn").onclick = () => rendition.next();
-    document.getElementById("left-zone").onclick = () => rendition.prev(); document.getElementById("right-zone").onclick = () => rendition.next();
     document.addEventListener("keyup", (e) => { if (e.key === "ArrowLeft") rendition.prev(); if (e.key === "ArrowRight") rendition.next(); });
   </script>
 </body>
